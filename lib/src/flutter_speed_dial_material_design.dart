@@ -3,6 +3,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial_material_design/src/layout.dart';
 import 'package:flutter_speed_dial_material_design/src/speed_dial_controller.dart';
+//TODO: create size parameter. This should affect the overlayed button.
+//TODO: overlayed button should not be clickable
+//TODO: get rid of wrap into floating action button parameter
+//TODO: Theme of icon inside a transparent floating button should be different
 
 // Special Thanks to Andrea Bizzotto and Matt Carroll!
 //
@@ -28,6 +32,7 @@ class SpeedDialFloatingActionButton extends StatelessWidget {
       this.onAction,
       @required this.childOnFold,
       this.childOnUnfold,
+      this.wrapChildIntoFloatingActionButton = true,
       this.useRotateAnimation = false,
       this.backgroundColor,
       this.foregroundColor,
@@ -41,6 +46,7 @@ class SpeedDialFloatingActionButton extends StatelessWidget {
   final ValueChanged<int> onAction;
   final Widget childOnFold;
   final Widget childOnUnfold;
+  final bool wrapChildIntoFloatingActionButton;
   final int animationDuration;
   final bool useRotateAnimation;
   final SpeedDialController controller;
@@ -80,27 +86,29 @@ class SpeedDialFloatingActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnchoredOverlay(
-      showOverlay: true,
-      overlayBuilder: (context, offset) {
-        return SpeedDial(
-          controller: controller,
-          actions: actions,
-          onAction: onAction,
-          childOnFold: childOnFold,
-          childOnUnfold: childOnUnfold,
-          animationDuration: animationDuration,
-          useRotateAnimation: useRotateAnimation,
-          backgroundColor: backgroundColor,
-          foregroundColor: foregroundColor,
-          screenColor: screenColor,
-          isDismissible: isDismissible,
-          offset: Offset(offset.dx, offset.dy),
-          labelPosition: labelPosition,
-        );
-      },
-      child: FloatingActionButton(onPressed: () {}),
-    );
+    return
+      AnchoredOverlay(
+        showOverlay: true,
+        overlayBuilder: (context, offset) {
+          return SpeedDial(
+            controller: controller,
+            actions: actions,
+            onAction: onAction,
+            childOnFold: childOnFold,
+            childOnUnfold: childOnUnfold,
+            wrapChildIntoFloatingActionButton: wrapChildIntoFloatingActionButton,
+            animationDuration: animationDuration,
+            useRotateAnimation: useRotateAnimation,
+            backgroundColor: backgroundColor,
+            foregroundColor: foregroundColor,
+            screenColor: screenColor,
+            isDismissible: isDismissible,
+            offset: Offset(offset.dx, offset.dy),
+            labelPosition: labelPosition,
+          );
+        },
+        child: FloatingActionButton(onPressed: () {}, backgroundColor: Colors.transparent, elevation: 0.0,),
+      );
   }
 }
 
@@ -130,6 +138,7 @@ class SpeedDial extends StatefulWidget {
     this.onAction,
     @required this.childOnFold,
     this.childOnUnfold,
+    this.wrapChildIntoFloatingActionButton,
     this.animationDuration,
     this.useRotateAnimation,
     this.backgroundColor,
@@ -146,6 +155,7 @@ class SpeedDial extends StatefulWidget {
   final ValueChanged<int> onAction;
   final Widget childOnFold;
   final Widget childOnUnfold;
+  final bool wrapChildIntoFloatingActionButton;
   final int animationDuration;
   final bool useRotateAnimation;
   final Color screenColor;
@@ -322,36 +332,44 @@ class _SpeedDialState extends State<SpeedDial> with TickerProviderStateMixin {
               curve: Curves.linear),
         ),
         child: FloatingActionButton(
-          backgroundColor: backgroundColor,
-          foregroundColor: foregroundColor,
-          mini: true,
-          child: widget.actions[index].child,
-          onPressed: () => _onAction(index),
-        ),
+                  backgroundColor: backgroundColor,
+                  foregroundColor: foregroundColor,
+                  mini: true,
+                  child: widget.actions[index].child,
+                  onPressed: () => _onAction(index))
       ),
     );
   }
 
   Widget _buildFab() {
-    return FloatingActionButton(
-      onPressed: toggle,
-      backgroundColor: widget.backgroundColor,
-      foregroundColor: widget.foregroundColor,
-      child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            if (widget.childOnUnfold == null) {
-              return widget.useRotateAnimation
-                  ? _buildRotation(widget.childOnFold)
-                  : widget.childOnFold;
-            } else {
-              return widget.useRotateAnimation
-                  ? _buildRotation(_buildAnimatedSwitcher())
-                  : _buildAnimatedSwitcher();
-            }
-          }),
-      elevation: 2.0,
-    );
+    var button = AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              if (widget.childOnUnfold == null) {
+                return widget.useRotateAnimation
+                    ? _buildRotation(widget.childOnFold)
+                    : widget.childOnFold;
+              } else {
+                return widget.useRotateAnimation
+                    ? _buildRotation(_buildAnimatedSwitcher())
+                    : _buildAnimatedSwitcher();
+              }
+            });
+    return widget.wrapChildIntoFloatingActionButton ?
+      FloatingActionButton(
+        onPressed: toggle,
+        backgroundColor: widget.backgroundColor,
+        foregroundColor: widget.foregroundColor,
+        child: button,
+        elevation: 2.0,
+      ) :
+      SizedBox(height: 48, width: 48, child: FittedBox(fit: BoxFit.fill, child: FloatingActionButton(
+        onPressed: toggle,
+        backgroundColor: widget.backgroundColor,
+        foregroundColor: widget.foregroundColor,
+        child: button,
+        elevation: 0.0,
+      )));
   }
 
   void toggle() {
